@@ -1,5 +1,5 @@
 ---
-name: smart-router
+name: smart-router-skills
 version: 1.0.0
 description: "智能路由 — 把简单任务分发给免费 AI 模型执行，为主模型省钱。任何 Agent 都能用。触发条件: 需要做简单文本任务（翻译、格式化、摘要、提取、分类）时，用免费模型代替付费模型。触发词: smart-router、智能路由、省钱模式、省 token、free model、route free。"
 license: MIT
