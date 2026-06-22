@@ -1,227 +1,126 @@
 ---
-name: smart-router-skills
-version: 1.0.0
-description: "智能路由 — 把简单任务分发给免费 AI 模型执行，为主模型省钱。任何 Agent 都能用。触发条件: 需要做简单文本任务（翻译、格式化、摘要、提取、分类）时，用免费模型代替付费模型。触发词: smart-router、智能路由、省钱模式、省 token、free model、route free。"
-license: MIT
-author: webkubor
-category: resource
-platforms: [linux, macos, windows]
-metadata:
-  openclaw:
-    tags: [routing, cost-saving, openrouter, free-models, optimization]
-    requires:
-      env: [OPENROUTER_API_KEY]
+name: smart-router
+description: "Smart Router — CS 智能路由省钱模式。所有 Agent 必读。简单任务走免费模型，核心任务才用主模型。免费模型按聪明度排序优先使用。"
 ---
 
-# Smart Router — AI Agent 省钱路由
+# Smart Router — Agent 任务梯度路由
 
-> **让简单任务走免费模型，复杂任务才花钱。**
-> 26+ 个免费模型随时待命，任何 Agent 都能接入。
+> **铁律：免费模型当小弟随便用，自己的 token 留给核心任务。**
 
-## 这是什么
+## 三级任务梯度
 
-一个路由策略文档。Agent 读完它之后，就知道什么时候该用免费模型、什么时候必须用付费模型。**不需要代码**——Agent 自己根据文档判断和调用。
-
-## 核心理念
+### 🟢 L1 — 免费模型干（随便用，不花自己的 token）
 
 ```
-不是所有任务都需要 GPT-4 / Claude / GLM-5.2
-翻译一段话？格式化 JSON？提取关键信息？→ 免费模型够了
-写代码？多步推理？架构设计？→ 才用付费模型
+翻译、格式化、摘要、信息提取、分类、打标签、代码注释
+列表/表格生成、正则生成、简单文案、消息草稿、JSON 转换
 ```
 
-## 免费 Worker 池（OpenRouter）
+**这类任务一律走 Smart Router 免费模型，禁止消耗主模型 token。**
 
-> 只需一个 OpenRouter API Key（免费注册），就能调用以下所有模型
-
-### 🏋️ 大参数（80B+）
-
-| Worker | 型号 | 上下文 | 擅长 |
-|--------|------|--------|------|
-| `qwen3-next-80b` | Qwen3-Next 80B-A3B | 262K | 中文任务、格式化、摘要 |
-| `nemotron-ultra-550b` | NVIDIA Nemotron 3 Ultra | 1M | 复杂分类、深度分析 |
-| `nemotron-super-120b` | NVIDIA Nemotron 3 Super | 1M | 分类、提取、分析 |
-| `gpt-oss-120b` | OpenAI GPT-OSS 120B | 131K | 通用英文任务 |
-| `llama-3.3-70b` | Meta Llama 3.3 70B | 131K | 通用任务、文案润色 |
-| `hermes-3-405b` | Nous Hermes 3 405B | 131K | 指令遵循、创意写作 |
-
-### 🔧 代码 & 长文本
-
-| Worker | 型号 | 上下文 | 擅长 |
-|--------|------|--------|------|
-| `qwen3-coder` | Qwen3 Coder 480B | 1M | 代码格式化、语法修复 |
-| `lyria-3-pro` | Google Lyria 3 Pro | 1M | 超长文本处理、翻译 |
-| `owl-alpha` | Owl Alpha | 1M | 超长上下文任务 |
-
-### ⚡ 轻量快速
-
-| Worker | 型号 | 上下文 | 擅长 |
-|--------|------|--------|------|
-| `gemma-4-31b` | Google Gemma 4 31B | 262K | 信息提取、结构化输出 |
-| `nex-n2-pro` | Nex AGI N2-Pro | 262K | 轻量推理 |
-| `gpt-oss-20b` | OpenAI GPT-OSS 20B | 131K | 极简任务、快速响应 |
-| `llama-3.2-3b` | Meta Llama 3.2 3B | 131K | 极简任务、JSON 格式化 |
-
-### 🎲 自动路由
-
-| Worker | 说明 |
-|--------|------|
-| `openrouter/free` | OpenRouter 官方自动选择最佳免费模型 |
-
-## 路由规则
+### 🟡 L2 — 免费模型优先，失败回退主模型
 
 ```
-任务复杂度判断
-    │
-    ├── 🟢 L1 简单 → 免费模型
-    │   ├─ 翻译（中↔英、任意语言）
-    │   ├─ 格式化（HTML↔Markdown、JSON 转换）
-    │   ├─ 文本摘要（非推理类）
-    │   ├─ 信息提取（从文本中提取字段）
-    │   ├─ 分类 / 打标签
-    │   ├─ 代码注释生成
-    │   ├─ 列表 / 表格生成
-    │   └─ 正则 / 模板生成
-    │
-    ├── 🟡 L2 中等 → 免费模型优先，失败回退付费
-    │   ├─ 简短文案撰写
-    │   ├─ API 响应解析
-    │   ├─ 简单 SQL 生成
-    │   └─ 邮件 / 消息草稿
-    │
-    └── 🔴 L3 复杂 → 付费主模型
-        ├─ 代码生成 / 重构
-        ├─ 多步推理
-        ├─ 架构设计
-        ├─ Tool Calling
-        └─ 对话回复
+API 响应解析、简单 SQL、中等文案、数据清洗
 ```
 
-## 使用方式
+先让免费模型试，搞砸了再用主模型。
 
-### 方式一：Agent 自主判断
-
-Agent 读完本文档后，遇到任务自动判断复杂度，选择免费或付费模型。
-
-### 方式二：显式标注
+### 🔴 L3 — 主模型认真干（webkubor 交给你的核心任务）
 
 ```
-用户: "[route: free] 把这段 HTML 转成 Markdown"
-Agent: → qwen3-next-80b 执行（免费）
+代码生成/重构、多步推理、架构设计、Tool Calling、对话回复
 ```
 
-### 方式三：定时切换（非核心时段自动省钱）
+**webkubor 交办的核心任务必须用自己的主模型认真完成。**
 
-Agent 读完本文档后，自动读取系统时间判断是否在省钱窗口。
+## 免费 Worker 池（按聪明度排序，优先用排前面的）
 
-```yaml
-# 默认省钱窗口
-省钱包模式:
-  start: "23:00"
-  end: "08:00"
-  规则: 该时段所有 L1/L2 任务强制走免费模型
-  例外: ["Tool Calling", "安全敏感", "多步推理"]
+> 数据源：OpenRouter 实时免费模型列表，按参数量 × 上下文 × 实际能力排序
+> 更新时间：2026-06-23
+
+### Tier S — 最强免费（优先用）
+
+| 优先级 | Worker | 型号 | 参数 | 上下文 | 擅长 |
+|--------|--------|------|------|--------|------|
+| 1 | `nemotron-ultra-550b` | NVIDIA Nemotron 3 Ultra | 550B-A55B | 1M | 复杂分类、深度分析、推理 |
+| 2 | `qwen3-coder` | Qwen3 Coder 480B | 480B-A35B | 1M | 代码格式化、语法修复、长文本 |
+| 3 | `hermes-3-405b` | Nous Hermes 3 | 405B | 131K | 指令遵循、创意写作 |
+
+### Tier A — 强力免费
+
+| 优先级 | Worker | 型号 | 参数 | 上下文 | 擅长 |
+|--------|--------|------|------|--------|------|
+| 4 | `nemotron-super-120b` | NVIDIA Nemotron 3 Super | 120B-A12B | 1M | 分类、提取、分析 |
+| 5 | `gpt-oss-120b` | OpenAI GPT-OSS | 120B | 131K | 通用英文任务 |
+| 6 | `qwen3-next-80b` | Qwen3-Next | 80B-A3B | 262K | 中文任务、格式化、摘要 |
+
+### Tier B — 通用免费
+
+| 优先级 | Worker | 型号 | 参数 | 上下文 | 擅长 |
+|--------|--------|------|------|--------|------|
+| 7 | `llama-3.3-70b` | Meta Llama 3.3 | 70B | 131K | 通用任务、文案润色 |
+| 8 | `gemma-4-31b` | Google Gemma 4 | 31B | 262K | 信息提取、结构化输出 |
+| 9 | `nemotron-nano-30b` | NVIDIA Nemotron 3 Nano | 30B-A3B | 256K | 轻量推理 |
+
+### Tier C — 快速免费（极简任务）
+
+| 优先级 | Worker | 型号 | 参数 | 上下文 | 擅长 |
+|--------|--------|------|------|--------|------|
+| 10 | `gpt-oss-20b` | OpenAI GPT-OSS | 20B | 131K | 极简任务、快速响应 |
+| 11 | `llama-3.2-3b` | Meta Llama 3.2 | 3B | 131K | JSON 格式化、极简 |
+| 12 | `openrouter/free` | OpenRouter 自动选择 | — | 200K | 懒得选就让它自动选 |
+
+## 调用方法
+
+```bash
+# curl 一行搞定（示例：用最强的 nemotron-ultra 做翻译）
+curl -s https://openrouter.ai/api/v1/chat/completions \
+  -H "Authorization: Bearer $OPENROUTER_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "nvidia/nemotron-3-ultra-550b-a55b:free",
+    "messages": [{"role":"user","content":"翻译成英文：这是一段中文文本"}]
+  }' | jq -r '.choices[0].message.content'
 ```
-
-用户可随时覆盖默认窗口：
-
-```
-用户: "省钱窗口改成 22:00 到 9:00"
-Agent: ✅ 已更新：22:00~09:00 走省钱模式
-
-用户: "关掉省钱模式，今晚熬夜写代码"
-Agent: ✅ 省钱模式已暂停，恢复全付费
-```
-
-**Agent 实现逻辑**（伪代码）：
-
-```python
-import datetime
-
-def should_use_free_model(task_complexity):
-    now = datetime.datetime.now().time()
-    eco_start = datetime.time(23, 0)
-    eco_end = datetime.time(8, 0)
-    
-    # 判断是否在省钱窗口（跨天：23:00~次日08:00）
-    in_eco_window = now >= eco_start or now <= eco_end
-    
-    if task_complexity == "L3":
-        return False  # 复杂任务永远走付费
-    
-    if in_eco_window and task_complexity in ("L1", "L2"):
-        return True   # 省钱窗口内 L1/L2 走免费
-    
-    if not in_eco_window and task_complexity == "L1":
-        return True   # 非窗口 L1 仍可走免费
-    
-    return False      # L2 非窗口走付费
-```
-
-## 调用示例
 
 ```python
 import urllib.request, json, os
 
-def route_to_free_model(task, content):
-    """把简单任务路由到免费 OpenRouter 模型"""
+def route_free(task, content, worker="nvidia/nemotron-3-ultra-550b-a55b:free"):
+    """把任务路由到免费模型。默认用最强的。"""
     url = "https://openrouter.ai/api/v1/chat/completions"
     headers = {
         "Authorization": f"Bearer {os.environ['OPENROUTER_API_KEY']}",
         "Content-Type": "application/json"
     }
     body = {
-        "model": "qwen/qwen3-next-80b-a3b-instruct:free",  # 免费
+        "model": worker,
         "messages": [{"role": "user", "content": f"{task}\n\n{content}"}],
-        "max_tokens": 2000
+        "max_tokens": 4000
     }
     req = urllib.request.Request(url, data=json.dumps(body).encode(), headers=headers)
-    resp = urllib.request.urlopen(req, timeout=30)
+    resp = urllib.request.urlopen(req, timeout=60)
     return json.loads(resp.read())["choices"][0]["message"]["content"]
-
-# 翻译 — 免费
-result = route_to_free_model("翻译成英文", "这是一段中文文本")
-```
-
-```bash
-# curl 一行搞定
-curl -s https://openrouter.ai/api/v1/chat/completions \
-  -H "Authorization: Bearer $OPENROUTER_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "model": "meta-llama/llama-3.3-70b-instruct:free",
-    "messages": [{"role":"user","content":"Summarize: ..."}]
-  }' | jq -r '.choices[0].message.content'
 ```
 
 ## 核心约束
 
-1. **免费模型不能用 tool calling** — 只用于纯文本输入输出
-2. **失败自动回退** — 免费模型超时/报错时，自动切付费主模型
-3. **安全敏感任务不走免费** — 涉及密钥、密码、用户隐私的必须走主模型
+1. **免费模型不能用 tool calling** — 只做纯文本输入输出
+2. **失败自动回退** — 免费模型超时/报错时，自动切主模型
+3. **安全敏感任务不走免费** — 密钥、密码、用户隐私必须走主模型
 4. **关键输出需验证** — JSON、代码等格式输出需要校验有效性
-5. **速率限制** — 免费模型有 RPM 限制（通常 20/分钟），高频任务走付费
+5. **有速率限制** — 免费模型通常 20 RPM，高频任务走主模型
+6. **优先用更强的** — 排前面的模型更聪明，优先选 Tier S/A
 
-## 成本对比
+## 选型参考：按任务类型选 Worker
 
-| 场景 | 全用付费模型 | Smart Router | 省了多少 |
-|------|------------|-------------|---------|
-| 100 次翻译 | ~$2.00 | $0.00 | 100% |
-| 50 次摘要 | ~$1.50 | $0.00 | 100% |
-| 200 次格式化 | ~$3.00 | $0.00 | 100% |
-| 混合任务（月） | ~$30 | ~$8 | 73% |
-
-## 获取 OpenRouter API Key
-
-1. 注册 [openrouter.ai](https://openrouter.ai)（免费）
-2. Settings → API Keys → Create Key
-3. `export OPENROUTER_API_KEY="sk-or-..."`
-
-## 相关资源
-
-- [OpenRouter 模型列表](https://openrouter.ai/models)
-- [免费模型自动更新](https://openrouter.ai/models?q=free)
-
----
-
-Built by [webkubor](https://github.com/webkubor) · Part of [CortexOS](https://github.com/webkubor/CortexOS)
+| 任务 | 推荐 Worker | 理由 |
+|------|------------|------|
+| 中文翻译/摘要 | `qwen3-next-80b` | 中文最强 |
+| 代码格式化 | `qwen3-coder` | 代码专用 480B |
+| 深度分析/分类 | `nemotron-ultra-550b` | 参数最大 |
+| 长文本处理(>131K) | `nemotron-super-120b` | 1M 上下文 |
+| 通用英文 | `gpt-oss-120b` | OpenAI 出品 |
+| 极简 JSON | `llama-3.2-3b` | 快速省事 |
+| 不知道选啥 | `openrouter/free` | 自动选择 |
